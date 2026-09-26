@@ -1,6 +1,6 @@
 backend:
-  name: github
-  repo: cnoscidh-ong/cnoscidh.github.io
+  name: turbo-github
+  turbo_site_id: a88ce0d2-f518-43db-9d6a-a6eed8c0e60f
   branch: main
 
 media_folder: "assets/uploads"
