@@ -102,12 +102,16 @@ async function loadActualites() {
       let imageHTML = "";
 
       if (article.image) {
+
+        const imageSrc = resolveImagePath(article.image);
+
         imageHTML =
           '<img src="' +
-          escapeHTML(article.image) +
+          escapeHTML(imageSrc) +
           '" alt="' +
           escapeHTML(article.title || "Actualité") +
           '" class="news-image">';
+
       }
 
       articleElement.innerHTML =
@@ -137,6 +141,32 @@ async function loadActualites() {
 
     container.innerHTML =
       "<p>Les actualités ne peuvent pas être chargées pour le moment.</p>";
+  }
+}
+
+
+/*
+  Corrige automatiquement les chemins des images
+  lorsque le site est hébergé dans /cnoscidh.github.io/
+*/
+function resolveImagePath(imagePath) {
+
+  if (!imagePath) {
+    return "";
+  }
+
+  try {
+
+    return new URL(
+      imagePath.replace(/^\/+/, ""),
+      window.location.href
+    ).href;
+
+  } catch (error) {
+
+    console.error("Erreur chemin image :", imagePath, error);
+
+    return imagePath;
   }
 }
 
