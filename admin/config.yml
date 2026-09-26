@@ -1,0 +1,19 @@
+backend:
+  name: turbo-github
+  turbo_site_id: a88ce0d2-f518-43db-9d6a-a6eed8c0e60f
+  branch: main
+
+media_folder: "assets/uploads"
+public_folder: "/assets/uploads"
+
+collections:
+  - name: "actualites"
+    label: "Actualités"
+    folder: "content/actualites"
+    create: true
+    slug: "{{slug}}"
+    fields:
+      - {label: "Titre", name: "title", widget: "string"}
+      - {label: "Date", name: "date", widget: "datetime"}
+      - {label: "Image", name: "image", widget: "image", required: false}
+      - {label: "Contenu", name: "body", widget: "markdown"}
