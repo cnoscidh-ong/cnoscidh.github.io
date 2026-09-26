@@ -17,7 +17,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // Charger les actualités depuis GitHub
+  // Charger les actualités
   loadActualites();
 });
 
@@ -44,7 +44,10 @@ async function loadActualites() {
     const files = await response.json();
 
     const markdownFiles = files.filter(function (file) {
-      return file.name.endsWith(".md") || file.name.endsWith(".markdown");
+      return (
+        file.type === "file" &&
+        (file.name.endsWith(".md") || file.name.endsWith(".markdown"))
+      );
     });
 
     if (markdownFiles.length === 0) {
@@ -57,25 +60,37 @@ async function loadActualites() {
 
     for (const file of markdownFiles) {
 
-      const fileResponse = await fetch(file.download_url);
+      try {
 
-      if (!fileResponse.ok) {
-        continue;
+        const fileResponse = await fetch(file.download_url);
+
+        if (!fileResponse.ok) {
+          continue;
+        }
+
+        const text = await fileResponse.text();
+
+        const article = parseMarkdownArticle(text);
+
+        article.filename = file.name;
+
+        articles.push(article);
+
+      } catch (error) {
+        console.error("Erreur avec le fichier :", file.name, error);
       }
-
-      const text = await fileResponse.text();
-
-      const article = parseMarkdownArticle(text);
-
-      article.filename = file.name;
-
-      articles.push(article);
     }
 
     // Plus récent en premier
     articles.sort(function (a, b) {
       return new Date(b.date || 0) - new Date(a.date || 0);
     });
+
+    if (articles.length === 0) {
+      container.innerHTML =
+        "<p>Aucune actualité publiée pour le moment.</p>";
+      return;
+    }
 
     container.innerHTML = "";
 
@@ -89,24 +104,28 @@ async function loadActualites() {
       if (article.image) {
         imageHTML =
           '<img src="' +
-          article.image +
+          escapeHTML(article.image) +
           '" alt="' +
-          escapeHTML(article.title) +
+          escapeHTML(article.title || "Actualité") +
           '" class="news-image">';
       }
 
       articleElement.innerHTML =
         imageHTML +
         '<div class="news-content">' +
+
         "<h3>" +
         escapeHTML(article.title || "Actualité") +
         "</h3>" +
+
         '<p class="news-date">' +
         formatDate(article.date) +
         "</p>" +
+
         '<div class="news-body">' +
         simpleMarkdown(article.body || "") +
         "</div>" +
+
         "</div>";
 
       container.appendChild(articleElement);
@@ -114,7 +133,7 @@ async function loadActualites() {
 
   } catch (error) {
 
-    console.error(error);
+    console.error("Erreur chargement actualités :", error);
 
     container.innerHTML =
       "<p>Les actualités ne peuvent pas être chargées pour le moment.</p>";
@@ -131,8 +150,9 @@ function parseMarkdownArticle(text) {
     body: ""
   };
 
-  // Lire le front matter entre --- et ---
-  const frontMatterMatch = text.match(/^---\s*([\s\S]*?)\s*---/);
+  // Chercher le front matter
+  const frontMatterMatch =
+    text.match(/^---\s*([\s\S]*?)\s*---/);
 
   if (frontMatterMatch) {
 
@@ -146,11 +166,14 @@ function parseMarkdownArticle(text) {
         return;
       }
 
-      const key = line.substring(0, separator).trim();
+      const key =
+        line.substring(0, separator).trim();
 
-      let value = line.substring(separator + 1).trim();
+      let value =
+        line.substring(separator + 1).trim();
 
-      value = value.replace(/^["']|["']$/g, "");
+      value =
+        value.replace(/^["']|["']$/g, "");
 
       if (key === "title") {
         article.title = value;
@@ -163,13 +186,16 @@ function parseMarkdownArticle(text) {
       if (key === "image") {
         article.image = value;
       }
+
     });
 
-    article.body = text.replace(frontMatterMatch[0], "").trim();
+    article.body =
+      text.replace(frontMatterMatch[0], "").trim();
 
   } else {
 
     article.body = text.trim();
+
   }
 
   return article;
@@ -181,12 +207,26 @@ function simpleMarkdown(text) {
   let html = escapeHTML(text);
 
   // Titres
-  html = html.replace(/^### (.*)$/gm, "<h4>$1</h4>");
-  html = html.replace(/^## (.*)$/gm, "<h3>$1</h3>");
-  html = html.replace(/^# (.*)$/gm, "<h2>$1</h2>");
+  html = html.replace(
+    /^### (.*)$/gm,
+    "<h4>$1</h4>"
+  );
 
-  // Gras
-  html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+  html = html.replace(
+    /^## (.*)$/gm,
+    "<h3>$1</h3>"
+  );
+
+  html = html.replace(
+    /^# (.*)$/gm,
+    "<h2>$1</h2>"
+  );
+
+  // Texte en gras
+  html = html.replace(
+    /\*\*(.*?)\*\*/g,
+    "<strong>$1</strong>"
+  );
 
   // Liens
   html = html.replace(
@@ -194,8 +234,11 @@ function simpleMarkdown(text) {
     '<a href="$2" target="_blank" rel="noopener">$1</a>'
   );
 
-  // Paragraphes
-  html = html.replace(/\n{2,}/g, "</p><p>");
+  // Sauts de ligne
+  html = html.replace(
+    /\n{2,}/g,
+    "</p><p>"
+  );
 
   html = "<p>" + html + "</p>";
 
